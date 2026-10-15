@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+}
+
+.theme--work {
+  background: #f5f3ee;
+  --phase-color: #7b695b;
+}
+
+.theme--shortBreak {
+  background: #eef5f1;
+  --phase-color: #527e6a;
+}
+
+.theme--longBreak {
+  background: #edf2f5;
+  --phase-color: #587688;
+}
+
+.timer-card {
+  background: rgb(255 255 255 / 86%);
+  color: var(--phase-color);
+}
+
+.phase-dot,
+.primary-button {
+  background: var(--phase-color);
+}
+
+.primary-button,
+.secondary-button {
+  min-width: 6.5rem;
+  border-radius: 9999px;
+  padding: 0.8rem 1.5rem;
+  font-weight: 600;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.primary-button {
+  color: white;
+}
+
+.secondary-button {
+  border: 1px solid rgb(0 0 0 / 12%);
+  background: white;
+  color: #57534e;
+}
+
+.primary-button:hover,
+.secondary-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgb(0 0 0 / 9%);
+}
+
+button:focus-visible {
+  outline: 3px solid var(--phase-color);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .primary-button,
+  .secondary-button {
+    transition: none;
+  }
+
+  .primary-button:hover,
+  .secondary-button:hover {
+    transform: none;
+  }
+}
