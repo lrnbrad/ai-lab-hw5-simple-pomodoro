@@ -1,12 +1,32 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { usePomodoro } from './composables/usePomodoro'
+import { useDailyProgress } from './composables/useDailyProgress'
 import { useTasks } from './composables/useTasks'
 import TaskList from './components/TaskList.vue'
 import SettingsDialog from './components/SettingsDialog.vue'
+import { playCompletionTone } from './audio'
 
 const taskList = useTasks()
-const timer = usePomodoro({ onWorkComplete: taskList.creditSelectedTask })
+const dailyProgress = useDailyProgress()
+const soundEnabled = ref(loadSoundPreference())
+const timer = usePomodoro({
+  onWorkComplete: () => {
+    taskList.creditSelectedTask()
+    dailyProgress.recordSession()
+  },
+  onPhaseComplete: () => {
+    if (soundEnabled.value) playCompletionTone()
+  },
+})
+
+function loadSoundPreference() {
+  try {
+    return localStorage.getItem('simple-pomodoro:sound') === 'true'
+  } catch {
+    return false
+  }
+}
 
 const phaseDetails = {
   work: { label: 'Focus', prompt: 'One thing at a time.' },
@@ -18,8 +38,15 @@ const currentPhase = computed(() => phaseDetails[timer.phase.value])
 const cycleTarget = computed(() => timer.settings.sessionsBeforeLongBreak)
 const settingsOpen = ref(false)
 
-function saveSettings(settings) {
-  if (timer.updateSettings(settings)) settingsOpen.value = false
+function saveSettings({ settings, soundEnabled: nextSoundEnabled }) {
+  if (!timer.updateSettings(settings)) return
+  soundEnabled.value = nextSoundEnabled
+  try {
+    localStorage.setItem('simple-pomodoro:sound', String(nextSoundEnabled))
+  } catch {
+    // The sound choice still works for this open page.
+  }
+  settingsOpen.value = false
 }
 </script>
 
@@ -42,7 +69,7 @@ function saveSettings(settings) {
         <div class="timer-display my-4 font-mono text-[clamp(5rem,19vw,9rem)] font-light leading-none tracking-tighter tabular-nums" role="timer" aria-label="Time remaining">
           {{ timer.formattedTime.value }}
         </div>
-        <p class="mb-8 text-sm text-stone-500">Session {{ Math.min(timer.cycleCompleted.value + 1, cycleTarget) }} of {{ cycleTarget }}</p>
+        <p class="mb-8 text-sm text-stone-500">Cycle progress: {{ timer.cycleCompleted.value }} / {{ cycleTarget }} completed · Session {{ Math.min(timer.cycleCompleted.value + 1, cycleTarget) }} of {{ cycleTarget }}</p>
 
         <div class="flex flex-wrap items-center justify-center gap-3">
           <button v-if="!timer.isRunning.value" class="primary-button" type="button" @click="timer.start">Start</button>
@@ -53,9 +80,15 @@ function saveSettings(settings) {
         <p class="mt-8 min-h-6 text-sm text-stone-500" role="status">{{ timer.announcement.value }}</p>
       </section>
 
-      <div class="mt-7 flex items-center justify-center gap-2 text-sm text-stone-600">
-        <span class="font-medium">Completed work sessions</span>
-        <span class="rounded-full bg-white/80 px-3 py-1 font-semibold">{{ timer.completedWorkSessions.value }}</span>
+      <div class="mt-7 flex flex-wrap items-center justify-center gap-5 text-sm text-stone-600">
+        <div class="flex items-center gap-2">
+          <span class="font-medium">Completed work sessions</span>
+          <span class="rounded-full bg-white/80 px-3 py-1 font-semibold">{{ timer.completedWorkSessions.value }}</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="font-medium">Today’s focus sessions</span>
+          <span class="rounded-full bg-white/80 px-3 py-1 font-semibold">{{ dailyProgress.todayCount.value }}</span>
+        </div>
       </div>
 
       <p v-if="taskList.selectedTask.value" class="mt-4 text-center text-sm text-stone-600">
@@ -73,6 +106,6 @@ function saveSettings(settings) {
         @delete="taskList.deleteTask"
       />
     </main>
-    <SettingsDialog :open="settingsOpen" :settings="timer.settings" @close="settingsOpen = false" @save="saveSettings" />
+    <SettingsDialog :open="settingsOpen" :settings="timer.settings" :sound-enabled="soundEnabled" @close="settingsOpen = false" @save="saveSettings" />
   </div>
 </template>
