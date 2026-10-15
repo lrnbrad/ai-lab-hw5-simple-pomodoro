@@ -1,4 +1,4 @@
-import { computed, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 
 export const PHASES = {
   work: 'work',
@@ -14,15 +14,61 @@ export const DEFAULT_SETTINGS = {
 }
 
 const durationInMilliseconds = (settings, phase) => settings[phase] * 60 * 1000
+const STORAGE_KEY = 'simple-pomodoro:timer'
+const DURATION_LIMITS = {
+  work: [1, 180],
+  shortBreak: [1, 120],
+  longBreak: [1, 120],
+  sessionsBeforeLongBreak: [1, 8],
+}
+
+function validSetting(key, value) {
+  const [minimum, maximum] = DURATION_LIMITS[key]
+  return Number.isInteger(value) && value >= minimum && value <= maximum
+}
+
+function loadSavedTimer() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    if (!saved || typeof saved !== 'object') return null
+
+    const settings = { ...DEFAULT_SETTINGS }
+    for (const key of Object.keys(DEFAULT_SETTINGS)) {
+      if (validSetting(key, saved.settings?.[key])) settings[key] = saved.settings[key]
+    }
+
+    const phase = Object.values(PHASES).includes(saved.phase) ? saved.phase : PHASES.work
+    const fullDuration = durationInMilliseconds(settings, phase)
+    const remainingMilliseconds = Number.isFinite(saved.remainingMilliseconds)
+      && saved.remainingMilliseconds > 0
+      && saved.remainingMilliseconds <= fullDuration
+      ? saved.remainingMilliseconds
+      : fullDuration
+
+    return {
+      settings,
+      phase,
+      remainingMilliseconds,
+      isRunning: saved.isRunning === true,
+      completedWorkSessions: Number.isInteger(saved.completedWorkSessions)
+        && saved.completedWorkSessions >= 0 ? saved.completedWorkSessions : 0,
+      cycleCompleted: Number.isInteger(saved.cycleCompleted)
+        && saved.cycleCompleted >= 0 ? saved.cycleCompleted : 0,
+    }
+  } catch {
+    return null
+  }
+}
 
 export function usePomodoro({ onWorkComplete } = {}) {
-  const settings = reactive({ ...DEFAULT_SETTINGS })
-  const phase = ref(PHASES.work)
-  const remainingMilliseconds = ref(durationInMilliseconds(settings, phase.value))
-  const isRunning = ref(false)
-  const completedWorkSessions = ref(0)
-  const cycleCompleted = ref(0)
-  const announcement = ref('Ready to focus?')
+  const saved = loadSavedTimer()
+  const settings = reactive(saved?.settings ?? { ...DEFAULT_SETTINGS })
+  const phase = ref(saved?.phase ?? PHASES.work)
+  const remainingMilliseconds = ref(saved?.remainingMilliseconds ?? durationInMilliseconds(settings, phase.value))
+  const isRunning = ref(saved?.isRunning ?? false)
+  const completedWorkSessions = ref(saved?.completedWorkSessions ?? 0)
+  const cycleCompleted = ref(saved?.cycleCompleted ?? 0)
+  const announcement = ref(saved ? 'Session restored.' : 'Ready to focus?')
 
   let intervalId = null
   let lastTick = null
@@ -37,6 +83,21 @@ export function usePomodoro({ onWorkComplete } = {}) {
   function stopInterval() {
     if (intervalId !== null) clearInterval(intervalId)
     intervalId = null
+  }
+
+  function persist() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        settings: { ...settings },
+        phase: phase.value,
+        remainingMilliseconds: remainingMilliseconds.value,
+        isRunning: isRunning.value,
+        completedWorkSessions: completedWorkSessions.value,
+        cycleCompleted: cycleCompleted.value,
+      }))
+    } catch {
+      // The timer remains usable if browser storage is unavailable.
+    }
   }
 
   function advancePhase(completedNaturally) {
@@ -69,6 +130,7 @@ export function usePomodoro({ onWorkComplete } = {}) {
       advancePhase(true)
     }
     remainingMilliseconds.value -= elapsed
+    persist()
   }
 
   function start() {
@@ -77,6 +139,7 @@ export function usePomodoro({ onWorkComplete } = {}) {
     announcement.value = phase.value === PHASES.work ? 'Focus session running.' : 'Break running.'
     lastTick = Date.now()
     intervalId = setInterval(updateCountdown, 200)
+    persist()
   }
 
   function pause() {
@@ -85,6 +148,7 @@ export function usePomodoro({ onWorkComplete } = {}) {
     isRunning.value = false
     stopInterval()
     announcement.value = 'Timer paused.'
+    persist()
   }
 
   function reset() {
@@ -92,13 +156,42 @@ export function usePomodoro({ onWorkComplete } = {}) {
     stopInterval()
     remainingMilliseconds.value = durationInMilliseconds(settings, phase.value)
     announcement.value = 'Timer reset.'
+    persist()
   }
 
   function skip() {
     if (isRunning.value) updateCountdown()
     advancePhase(false)
     lastTick = Date.now()
+    persist()
   }
+
+  function updateSettings(nextSettings) {
+    let currentDurationChanged = false
+    for (const key of Object.keys(DEFAULT_SETTINGS)) {
+      const value = Number(nextSettings[key])
+      if (!validSetting(key, value)) return false
+      if (key === phase.value && settings[key] !== value) currentDurationChanged = true
+    }
+
+    for (const key of Object.keys(DEFAULT_SETTINGS)) settings[key] = Number(nextSettings[key])
+    if (currentDurationChanged) {
+      remainingMilliseconds.value = durationInMilliseconds(settings, phase.value)
+      lastTick = Date.now()
+      announcement.value = 'Current session restarted with the new duration.'
+    } else {
+      announcement.value = 'Settings saved.'
+    }
+    persist()
+    return true
+  }
+
+  onMounted(() => {
+    if (isRunning.value) {
+      lastTick = Date.now()
+      intervalId = setInterval(updateCountdown, 200)
+    }
+  })
 
   onUnmounted(stopInterval)
 
@@ -116,5 +209,6 @@ export function usePomodoro({ onWorkComplete } = {}) {
     pause,
     reset,
     skip,
+    updateSettings,
   }
 }

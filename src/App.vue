@@ -1,8 +1,9 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { usePomodoro } from './composables/usePomodoro'
 import { useTasks } from './composables/useTasks'
 import TaskList from './components/TaskList.vue'
+import SettingsDialog from './components/SettingsDialog.vue'
 
 const taskList = useTasks()
 const timer = usePomodoro({ onWorkComplete: taskList.creditSelectedTask })
@@ -15,6 +16,11 @@ const phaseDetails = {
 
 const currentPhase = computed(() => phaseDetails[timer.phase.value])
 const cycleTarget = computed(() => timer.settings.sessionsBeforeLongBreak)
+const settingsOpen = ref(false)
+
+function saveSettings(settings) {
+  if (timer.updateSettings(settings)) settingsOpen.value = false
+}
 </script>
 
 <template>
@@ -23,6 +29,7 @@ const cycleTarget = computed(() => timer.settings.sessionsBeforeLongBreak)
       <header class="mb-10 text-center sm:mb-14">
         <p class="mb-2 text-xs font-semibold uppercase tracking-[0.28em] text-stone-500">A quiet place to begin</p>
         <h1 class="font-serif text-4xl font-semibold tracking-tight sm:text-5xl">Simple Pomodoro</h1>
+        <button class="secondary-button mt-5" type="button" @click="settingsOpen = true">Settings</button>
       </header>
 
       <section class="timer-card rounded-[2rem] p-6 text-center shadow-lg shadow-stone-300/20 sm:p-10" aria-label="Pomodoro timer">
@@ -66,5 +73,6 @@ const cycleTarget = computed(() => timer.settings.sessionsBeforeLongBreak)
         @delete="taskList.deleteTask"
       />
     </main>
+    <SettingsDialog :open="settingsOpen" :settings="timer.settings" @close="settingsOpen = false" @save="saveSettings" />
   </div>
 </template>
