@@ -51,7 +51,7 @@ function save() {
           <input v-model="draftSoundEnabled" type="checkbox">
           Play a sound when a phase ends
         </label>
-        <p class="text-sm text-stone-500">Changing the current phase length restarts that phase immediately.</p>
+        <p class="muted-text text-sm">Changing the current phase length restarts that phase immediately.</p>
         <button class="primary-button w-full" type="submit">Save settings</button>
       </form>
     </section>
