@@ -90,6 +90,15 @@ button:focus-visible {
   background: #e7e5e4;
 }
 
+.settings-overlay {
+  background: rgb(41 37 36 / 45%);
+}
+
+.settings-panel {
+  background: #fff;
+  color: #292524;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .primary-button,
   .secondary-button {
