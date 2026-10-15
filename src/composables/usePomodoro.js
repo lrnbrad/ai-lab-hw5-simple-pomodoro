@@ -60,7 +60,7 @@ function loadSavedTimer() {
   }
 }
 
-export function usePomodoro({ onWorkComplete } = {}) {
+export function usePomodoro({ onWorkComplete, onPhaseComplete } = {}) {
   const saved = loadSavedTimer()
   const settings = reactive(saved?.settings ?? { ...DEFAULT_SETTINGS })
   const phase = ref(saved?.phase ?? PHASES.work)
@@ -101,6 +101,7 @@ export function usePomodoro({ onWorkComplete } = {}) {
   }
 
   function advancePhase(completedNaturally) {
+    if (completedNaturally) onPhaseComplete?.(phase.value)
     if (phase.value === PHASES.work) {
       if (completedNaturally) {
         completedWorkSessions.value += 1

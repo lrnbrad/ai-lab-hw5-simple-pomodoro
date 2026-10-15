@@ -1,20 +1,25 @@
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 
 const props = defineProps({
   open: { type: Boolean, required: true },
   settings: { type: Object, required: true },
+  soundEnabled: { type: Boolean, required: true },
 })
 
 const emit = defineEmits(['close', 'save'])
 const draft = reactive({ work: 25, shortBreak: 5, longBreak: 15, sessionsBeforeLongBreak: 4 })
+const draftSoundEnabled = ref(false)
 
 watch(() => props.open, (open) => {
-  if (open) Object.assign(draft, props.settings)
+  if (open) {
+    Object.assign(draft, props.settings)
+    draftSoundEnabled.value = props.soundEnabled
+  }
 }, { immediate: true })
 
 function save() {
-  emit('save', { ...draft })
+  emit('save', { settings: { ...draft }, soundEnabled: draftSoundEnabled.value })
 }
 </script>
 
@@ -41,6 +46,10 @@ function save() {
         <label class="block text-sm font-medium">
           Work sessions before a long break
           <input v-model.number="draft.sessionsBeforeLongBreak" class="task-input mt-1 w-full" type="number" min="1" max="8" step="1" required>
+        </label>
+        <label class="flex items-center gap-3 text-sm font-medium">
+          <input v-model="draftSoundEnabled" type="checkbox">
+          Play a sound when a phase ends
         </label>
         <p class="text-sm text-stone-500">Changing the current phase length restarts that phase immediately.</p>
         <button class="primary-button w-full" type="submit">Save settings</button>
