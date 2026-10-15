@@ -60,6 +60,36 @@ button:focus-visible {
   outline-offset: 3px;
 }
 
+.task-input {
+  border: 1px solid #d6d3d1;
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  background: white;
+  color: #292524;
+}
+
+.task-input:focus-visible {
+  outline: 3px solid var(--phase-color);
+  outline-offset: 2px;
+}
+
+.task-action {
+  border: 1px solid #d6d3d1;
+  border-radius: 9999px;
+  padding: 0.4rem 0.8rem;
+  color: #57534e;
+  font-size: 0.875rem;
+}
+
+.task-action:hover {
+  background: #f5f5f4;
+}
+
+.task-action:disabled {
+  cursor: default;
+  background: #e7e5e4;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .primary-button,
   .secondary-button {

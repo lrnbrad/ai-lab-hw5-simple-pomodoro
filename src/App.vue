@@ -1,8 +1,11 @@
 <script setup>
 import { computed } from 'vue'
 import { usePomodoro } from './composables/usePomodoro'
+import { useTasks } from './composables/useTasks'
+import TaskList from './components/TaskList.vue'
 
-const timer = usePomodoro()
+const taskList = useTasks()
+const timer = usePomodoro({ onWorkComplete: taskList.creditSelectedTask })
 
 const phaseDetails = {
   work: { label: 'Focus', prompt: 'One thing at a time.' },
@@ -47,6 +50,21 @@ const cycleTarget = computed(() => timer.settings.sessionsBeforeLongBreak)
         <span class="font-medium">Completed work sessions</span>
         <span class="rounded-full bg-white/80 px-3 py-1 font-semibold">{{ timer.completedWorkSessions.value }}</span>
       </div>
+
+      <p v-if="taskList.selectedTask.value" class="mt-4 text-center text-sm text-stone-600">
+        Focusing on <strong>{{ taskList.selectedTask.value.name }}</strong>
+        · {{ taskList.selectedTask.value.completed }} / {{ taskList.selectedTask.value.estimate }} Pomodoros
+      </p>
+
+      <TaskList
+        :tasks="taskList.tasks.value"
+        :selected-task-id="taskList.selectedTaskId.value"
+        @add="taskList.addTask"
+        @edit="taskList.editTask"
+        @select="taskList.selectTask"
+        @complete="taskList.toggleTaskComplete"
+        @delete="taskList.deleteTask"
+      />
     </main>
   </div>
 </template>
